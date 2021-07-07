@@ -1,0 +1,14 @@
+skillMetadata:
+  sections:
+    - name: Authentication
+      fields:
+        - name: appId
+          type: text
+          label: Wolfram|Alpha API Key
+          value:
+    - name: Options
+      fields:
+        - name: autotranslate
+          type: checkbox
+          label: Automatic translation,
+          value: True
