@@ -232,13 +232,13 @@ def check_wolfram_credentials(cred_str) -> bool:
     :param cred_str: string appID to test
     :return: True if credential is valid, else False
     """
-    from six.moves import urllib
-
+    import requests
+    if not cred_str:
+        return False
     try:
-        url = 'https://api.wolframalpha.com/v2/result?appid=' + cred_str + '&i=' + \
-              'what is up'.replace(' ', '+')
-        urllib.request.urlopen(url)
-        return True
+        url = f'https://api.wolframalpha.com/v2/result?appid={cred_str}&i=who+are+you'
+        resp = requests.get(url)
+        return resp.ok
     except Exception as e:
         LOG.error(e)
         return False
