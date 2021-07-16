@@ -1,3 +1,26 @@
+# NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
+#
+# Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
+#
+# Notice of License - Duplicating this Notice of License near the start of any file containing
+# a derivative of this software is a condition of license for this software.
+# Friendly Licensing:
+# No charge, open source royalty free use of the Neon AI software source and object is offered for
+# educational users, noncommercial enthusiasts, Public Benefit Corporations (and LLCs) and
+# Social Purpose Corporations (and LLCs). Developers can contact developers@neon.ai
+# For commercial licensing, distribution of derivative works or redistribution please contact licenses@neon.ai
+# Distributed on an "AS IS” basis without warranties or conditions of any kind, either express or implied.
+# Trademarks of Neongecko: Neon AI(TM), Neon Assist (TM), Neon Communicator(TM), Klat(TM)
+# Authors: Guy Daniels, Daniel McKnight, Regina Bloomstine, Elon Gasper, Richard Leeds
+#
+# Specialized conversational reconveyance options from Conversation Processing Intelligence Corp.
+# US Patents 2008-2021: US7424516, US20140161250, US20140177813, US8638908, US8068604, US8553852, US10530923, US10530924
+# China Patent: CN102017585  -  Europe Patent: EU2156652  -  Patents Pending
+#
+# This software is an enhanced derivation of the Mycroft Project which is licensed under the
+# Apache software Foundation software license 2.0 https://www.apache.org/licenses/LICENSE-2.0
+# Changes Copyright 2008-2021 Neongecko.com Inc. | All Rights Reserved
+#
 # Copyright 2017 Mycroft AI Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,24 +34,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
 
 import re
-import wolframalpha
-import requests
-from os.path import dirname, join
-from requests import HTTPError
-from io import BytesIO
-from mtranslate import translate
 
 from adapt.intent import IntentBuilder
-from mycroft.api import Api
-from mycroft.messagebus.message import Message
-from mycroft.skills.core import intent_handler
+from neon_utils import get_utterance_user
+from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
+from neon_utils.logger import LOG
+from neon_utils.authentication_utils import find_neon_wolfram_key
+from neon_utils.service_apis.wolfram_alpha import get_wolfram_alpha_response, QueryApi
+
 from mycroft.util.parse import normalize
-from mycroft.version import check_version
-from mycroft.util.log import LOG
-from mycroft.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 
 
 class EnglishQuestionParser(object):
@@ -43,21 +59,18 @@ class EnglishQuestionParser(object):
             #    * when X was Y, e.g. "tell me when america was founded"
             #    how X is Y, e.g. "how tall is mount everest"
             re.compile(
-                r".*(?P<QuestionWord>who|what|when|where|why|which|whose) "
-                r"(?P<Query1>.*) (?P<QuestionVerb>is|are|was|were) "
-                r"(?P<Query2>.*)",
-                re.IGNORECASE,
-            ),
+                ".*(?P<QuestionWord>who|what|when|where|why|which|whose|convert|how old) "
+                "(?P<Query1>.*) (?P<QuestionVerb>is|are|was|were|to) "
+                "(?P<Query2>.*)"),
             # Match:
             #    how X Y, e.g. "how do crickets chirp"
             re.compile(
-                r".*(?P<QuestionWord>who|what|when|where|why|which|how) "
-                r"(?P<QuestionVerb>\w+) (?P<Query>.*)",
-                re.IGNORECASE,
-            ),
+                ".*(?P<QuestionWord>who|what|when|where|why|which|how) "
+                "(?P<QuestionVerb>\w+) (?P<Query>.*)")
         ]
 
-    def _normalize(self, groupdict):
+    @staticmethod
+    def _normalize(groupdict):
         if "Query" in groupdict:
             return groupdict
         elif "Query1" and "Query2" in groupdict:
@@ -76,64 +89,6 @@ class EnglishQuestionParser(object):
         return None
 
 
-SPOKEN_URL = "http://api.wolframalpha.com/v1/spoken"
-
-
-class WolframClient(wolframalpha.Client):
-    """ Adding a spoken api method to the normal wolfram client. """
-
-    def spoken(self, query, lat_lon, units="metric"):
-        r = requests.get(
-            SPOKEN_URL,
-            params={
-                "appid": self.app_id,
-                "i": query,
-                "geolocation": "{},{}".format(*lat_lon),
-                "units": units,
-            },
-        )
-        if r.ok:
-            return r.text
-        else:
-            return None
-
-
-class WAApi(Api):
-    """ Wrapper for wolfram alpha calls through Mycroft Home API. """
-
-    def __init__(self):
-        super(WAApi, self).__init__("wolframAlphaSpoken")
-
-    def get_data(self, response):
-        return response
-
-    def query(self, input):
-        data = self.request({"query": {"input": input}})
-        return wolframalpha.Result(BytesIO(data.content))
-
-    def spoken(self, query, lat_lon, units="metric"):
-        try:
-            r = self.request(
-                {
-                    "query": {
-                        "i": query,
-                        "geolocation": "{},{}".format(*lat_lon),
-                        "units": units,
-                    }
-                }
-            )
-        except HTTPError as e:
-            if e.response.status_code == 401:
-                raise
-            else:
-                r = e.response
-        if r.ok:
-            print(r.text)
-            return r.text
-        else:
-            return None
-
-
 class WolframAlphaSkill(CommonQuerySkill):
     PIDS = [
         "Value",
@@ -145,200 +100,148 @@ class WolframAlphaSkill(CommonQuerySkill):
 
     def __init__(self):
         super().__init__()
-        self.__init_client()
         self.question_parser = EnglishQuestionParser()
-        self.last_query = None
-        self.last_answer = None
-        self.autotranslate = False
+        self.queries = {}
+        self.saved_answers = self.get_cached_data("wolfram.cache")
+        self.appID = None
+        self._get_app_id()
 
-    def __init_client(self):
-        # Attempt to get an AppID skill settings instead (normally this
-        # doesn't exist, but privacy-conscious might want to do this)
-        appID = self.settings.get("appID", None)
-
-        if appID:
-            # user has a private AppID
-            self.client = WolframClient(appID)
+    def _get_app_id(self):
+        if check_wolfram_credentials(self.settings.get("appId")):
+            self.appID = self.settings.get("appId")
+        elif check_wolfram_credentials(self.local_config.get("authVars", {}).get("waID")):
+            self.appID = self.local_config.get("authVars", {}).get("waID")
         else:
-            # use the default API for Wolfram queries
-            self.client = WAApi()
+            try:
+                self.appID = find_neon_wolfram_key()
+            except FileNotFoundError:
+                self.appID = None
 
     def initialize(self):
-        self._setup()
-        self.settings_change_callback = self.on_settings_changed
+        sources_intent = IntentBuilder("WolframSource").require("Give").require("Source").build()
+        self.register_intent(sources_intent, self.handle_get_sources)
 
-    def on_settings_changed(self):
-        self.log.debug("settings changed")
-        self._setup()
+        ask_wolfram_intent = IntentBuilder("AskWolfram").require("Request").build()
+        self.register_intent(ask_wolfram_intent, self.handle_ask_wolfram)
 
-    def _setup(self):
-        self.autotranslate = self.settings.get("autotranslate", True)
-        self.log.debug("autotranslate: {}".format(self.autotranslate))
+    def handle_ask_wolfram(self, message):
+        utterance = message.data.get("utterance").replace(message.data.get("Request"), "")
+        user = get_utterance_user(message)
+        result, _ = self._query_wolfram(utterance, message)
+        if result:
+            self.speak_dialog("response", {"response": result.rstrip('.')})
+            self.queries[user] = utterance
+            if self.gui_enabled:
+                url = 'https://www.wolframalpha.com/input?i=' + utterance.replace(' ', '+')
+                self.gui.show_url(url)
+                self.clear_gui_timeout(120)
 
-    def get_result(self, res):
-        try:
-            return next(res.results).text
-        except:
-            result = None
-            try:
-                for pid in self.PIDS:
-                    result = self.__find_pod_id(res.pods, pid)
-                    if result:
-                        if pid.endswith(":PeopleData"):
-                            result = parse_people_data(result)
-                        else:
-                            result = result[:5]
-                        break
-                if not result:
-                    result = self.__find_num(res.pods, "200")
-                return result
-            except:
-                return result
-
-    def CQS_match_query_phrase(self, utt):
-        self.log.debug("WolframAlpha query: " + utt)
-
-        # TODO: Localization.  Wolfram only allows queries in English,
-        #       so perhaps autotranslation or other languages?  That
-        #       would also involve auto-translation of the result,
-        #       which is a lot of room for introducting translation
-        #       issues.
-
-        # Automatic translation to English
-        orig_utt = utt
-        if self.autotranslate and self.lang[:2] != "en":
-            utt = translate(utt, from_language=self.lang[:2], to_language="en")
-            self.log.debug("translation: {}".format(utt))
-
-        utterance = normalize(utt, self.lang, remove_articles=False)
-        parsed_question = self.question_parser.parse(utterance)
-
-        query = utterance
-        if parsed_question:
-            # Try to store pieces of utterance (None if not parsed_question)
-            utt_word = parsed_question.get("QuestionWord")
-            utt_verb = parsed_question.get("QuestionVerb")
-            utt_query = parsed_question.get("Query")
-            query = "%s %s %s" % (utt_word, utt_verb, utt_query)
-            phrase = "know %s %s %s" % (utt_word, utt_query, utt_verb)
-            self.log.debug("Querying WolframAlpha: " + query)
+    def CQS_match_query_phrase(self, utt, message):
+        LOG.info(utt)
+        result, key = self._query_wolfram(utt, message)
+        if result:
+            to_speak = self.dialog_renderer.render("response", {"response": result.rstrip(".")})
+            user = self.get_utterance_user(message)
+            return utt, CQSMatchLevel.GENERAL, to_speak, {"query": utt, "answer": result,
+                                                          "user": user, "key": key}
         else:
-            # This utterance doesn't look like a question, don't waste
-            # time with WolframAlpha.
-            self.log.debug("Non-question, ignoring: " + utterance)
-            return False
-
-        try:
-            response = self.client.spoken(
-                utt,
-                (
-                    self.location["coordinate"]["latitude"],
-                    self.location["coordinate"]["longitude"],
-                ),
-                self.config_core["system_unit"],
-            )
-            if response:
-                response = self.process_wolfram_string(response)
-                # Automatic re-translation to 'self.lang'
-                if self.autotranslate and self.lang[:2] != "en":
-                    response = translate(
-                        response, from_language="en", to_language=self.lang[:2]
-                    )
-                    utt = orig_utt
-                self.log.debug("utt: {} res: {}".format(utt, response))
-                return (
-                    utt,
-                    CQSMatchLevel.GENERAL,
-                    response,
-                    {"query": utt, "answer": response},
-                )
-            else:
-                return None
-        except HTTPError as e:
-            if e.response.status_code == 401:
-                self.bus.emit(Message("mycroft.not.paired"))
-            return True
-        except Exception as e:
-            self.log.exception(e)
-            return False
+            return None
 
     def CQS_action(self, phrase, data):
         """ If selected prepare to send sources. """
         if data:
-            self.log.info("Setting information for source")
-            self.last_query = data["query"]
-            self.last_answer = data["answer"]
+            LOG.info('Setting information for source')
+            user = data['user']
+            self.queries[user] = data["query"]
+            if self.gui_enabled:
+                url = 'https://www.wolframalpha.com/input?i=' + data["query"].replace(' ', '+')
+                self.gui.show_url(url)
+                self.clear_gui_timeout(120)
 
-    @staticmethod
-    def __find_pod_id(pods, pod_id):
-        # Wolfram returns results in "pods".  This searches a result
-        # structure for a specific pod ID.
-        # See https://products.wolframalpha.com/api/documentation/
-        for pod in pods:
-            if pod_id in pod.id:
-                return pod.text
-        return None
-
-    @staticmethod
-    def __find_num(pods, pod_num):
-        for pod in pods:
-            if pod.node.attrib["position"] == pod_num:
-                return pod.text
-        return None
-
-    def process_wolfram_string(self, text):
-        # Remove extra whitespace
-        text = re.sub(r" \s+", r" ", text)
-
-        # Convert | symbols to commas
-        text = re.sub(r" \| ", r", ", text)
-
-        # Convert newlines to commas
-        text = re.sub(r"\n", r", ", text)
-
-        # Convert !s to factorial
-        text = re.sub(r"!", r",factorial", text)
-
-        with open(join(dirname(__file__), "regex", self.lang, "list.rx"), "r") as regex:
-            list_regex = re.compile(regex.readline().strip("\n"))
-
-        match = list_regex.match(text)
-        if match:
-            text = match.group("Definition")
-
-        return text
-
-    @intent_handler(IntentBuilder("Info").require("Give").require("Source"))
     def handle_get_sources(self, message):
-        if self.last_query:
-            # Send an email to the account this device is registered to
-            data = {
-                "query": self.last_query,
-                "answer": self.last_answer,
-                "url_query": self.last_query.replace(" ", "+"),
-            }
+        user = self.get_utterance_user(message)
+        if user in self.queries.keys():
+            last_query = self.queries[user]
+            preference_user = self.preference_user(message)
+            email_addr = preference_user["email"]
 
-            self.send_email(
-                self.__translate("email.subject", data),
-                self.__translate("email.body", data),
-            )
-            self.speak_dialog("sent.email")
+            if email_addr:
+                title = "Wolfram|Alpha Source"
+                body = f"\nHere is the answer to your question: {last_query}\nView result on " \
+                       f"Wolfram|Alpha: https://www.wolframalpha.com/input/?i={last_query.replace(' ', '+')}\n\n" \
+                       f"-Neon"
+                # Send Email
+                self.send_email(title, body, message, email_addr)
+                self.speak_dialog("sent.email", {"email": email_addr}, private=True)
+            else:
+                self.speak_dialog("no.email", private=True)
         else:
-            self.speak_dialog("no.info.to.send")
+            self.speak_dialog("no.info.to.send", private=True)
 
-    def shutdown(self):
-        super(WolframAlphaSkill, self).shutdown()
+    def stop(self):
+        if self.gui_enabled:
+            self.gui.clear()
 
-    def __translate(self, template, data=None):
-        return self.dialog_renderer.render(template, data)
+    def _query_wolfram(self, utterance, message):
+        utterance = normalize(utterance, remove_articles=False)
+        parsed_question = self.question_parser.parse(utterance)
+        LOG.debug(parsed_question)
+        if parsed_question:
+            # Try to store pieces of utterance (None if not parsed_question)
+            utt_word = parsed_question.get('QuestionWord')
+            utt_verb = parsed_question.get('QuestionVerb')
+            utt_query = parsed_question.get('Query')
+            LOG.debug(len(str(utt_query).split()))
+            query = "%s %s %s" % (utt_word, utt_verb, utt_query)
+            LOG.debug("Querying WolframAlpha: " + query)
+
+            preference_location = self.preference_location(message)
+            lat = str(preference_location['lat'])
+            lng = str(preference_location['lng'])
+            units = str(self.preference_unit(message)["measure"])
+            query_type = QueryApi.SHORT if self.server else QueryApi.SPOKEN
+            key = (utterance, lat, lng, units, repr(query_type))
+
+            # TODO: This should be its own intent or skill DM
+            if "convert" in query:
+                to_convert = utt_query[:utt_query.index(utt_query.split(" ")[-1])]
+                query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
+            LOG.info(f"query={query}")
+
+            if self.saved_answers.get(key):
+                LOG.info(f"Using W|A Cached response")
+                result = self.saved_answers.get(key)[0]
+            else:
+                kwargs = {"lat": lat, "lng": lng}
+                if self.appID:
+                    kwargs["app_id"] = self.appID
+                result = get_wolfram_alpha_response(query, query_type, units, **kwargs)
+                LOG.info(f"result={result}")
+            if result:
+                self.saved_answers[key] = [result, query]
+                self.update_cached_data("wolfram.txt", self.saved_answers)
+        else:
+            result = None
+            key = None
+        return result, key
 
 
-def parse_people_data(data):
-    """Handle :PeopleData
-    Reduces the length of the returned data somewhat.
+def check_wolfram_credentials(cred_str) -> bool:
     """
-    lines = data.split("\n")
-    return ". ".join(lines[: min(len(lines), 3)])
+    Validate a WolframAlpha credential
+    :param cred_str: string appID to test
+    :return: True if credential is valid, else False
+    """
+    import requests
+    if not cred_str:
+        return False
+    try:
+        url = f'https://api.wolframalpha.com/v2/result?appid={cred_str}&i=who+are+you'
+        resp = requests.get(url)
+        return resp.ok
+    except Exception as e:
+        LOG.error(e)
+        return False
 
 
 def create_skill():
