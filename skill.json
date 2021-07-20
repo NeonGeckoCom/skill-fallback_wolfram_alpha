@@ -17,7 +17,7 @@
         "python": [
             "requests>=2.13.0",
             "mtranslate",
-            "git+https://github.com/neongeckocom/neon-skill-utils"
+            "neon-utils>=0.5.7"
         ],
         "system": {},
         "skill": []
