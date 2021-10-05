@@ -1,2 +1,7 @@
+!settingsmeta.yml
+*.lock
+.idea/
+.msm
 *.pyc
-settings.json
+settings.json__pycache__/
+!.github/*
