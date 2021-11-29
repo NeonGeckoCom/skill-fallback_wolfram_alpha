@@ -1,6 +1,6 @@
 {
     "title": "Wolfram Alpha",
-    "url": "https://github.com/NeonGeckoCom/fallback-wolfram-alpha",
+    "url": "https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha",
     "summary": "General knowledge fallback handler based on [Wolfram Alpha](https://wolframalpha.com) services",
     "short_description": "General knowledge fallback handler based on [Wolfram Alpha](https://wolframalpha.com) services",
     "description": "Answers general knowledge, math, and definition questions by using Wolfram Alpha Api services. If the user is interested in knowing where the information for the spoken answer came from, Neon can send the most recent source of the spoken details to user\u2019s email. Responses are cached and saved for later use. Use of this skill requires use of third-party APIs. If you do not have access to Neon API servers, you may access the Wolfram|Alpha API directly by providing a key in `~/wolfram.txt`. You can generate a Wolfram|Alpha key [here](https://developer.wolframalpha.com/portal/myapps/).",
@@ -31,7 +31,7 @@
         "arm"
     ],
     "branch": "master",
-    "license": "NeonAI License v1.0",
+    "license": "BSD-3-Clause",
     "icon": "https://raw.githack.com/FortAwesome/Font-Awesome/master/svgs/solid/question.svg",
     "category": "",
     "categories": [
@@ -39,6 +39,11 @@
     ],
     "tags": [
         ""
+    ],
+    "credits": [
+        "Mycroft AI",
+        "NeonDaniel",
+        "reginaneon"
     ],
     "skillname": "Wolfram Alpha",
     "authorname": "NeonGeckoCom",
