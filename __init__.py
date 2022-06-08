@@ -47,7 +47,8 @@ from neon_utils import get_utterance_user
 from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from neon_utils.logger import LOG
 from neon_utils.authentication_utils import find_neon_wolfram_key
-from neon_utils.service_apis.wolfram_alpha import get_wolfram_alpha_response, QueryApi
+
+from neon_api_proxy.client.wolfram_alpha import get_wolfram_alpha_response, QueryApi
 
 from mycroft.util.parse import normalize
 
@@ -191,43 +192,48 @@ class WolframAlphaSkill(CommonQuerySkill):
         utterance = normalize(utterance, remove_articles=False)
         parsed_question = self.question_parser.parse(utterance)
         LOG.debug(parsed_question)
-        if parsed_question:
-            # Try to store pieces of utterance (None if not parsed_question)
-            utt_word = parsed_question.get('QuestionWord')
-            utt_verb = parsed_question.get('QuestionVerb')
-            utt_query = parsed_question.get('Query')
-            LOG.debug(len(str(utt_query).split()))
-            query = "%s %s %s" % (utt_word, utt_verb, utt_query)
-            LOG.debug("Querying WolframAlpha: " + query)
+        if not parsed_question:
+            return None, None
 
-            preference_location = self.preference_location(message)
-            lat = str(preference_location['lat'])
-            lng = str(preference_location['lng'])
-            units = str(self.preference_unit(message)["measure"])
-            query_type = QueryApi.SHORT if self.server else QueryApi.SPOKEN
-            key = (utterance, lat, lng, units, repr(query_type))
+        # Try to store pieces of utterance (None if not parsed_question)
+        utt_word = parsed_question.get('QuestionWord')
+        utt_verb = parsed_question.get('QuestionVerb')
+        utt_query = parsed_question.get('Query')
+        LOG.debug(len(str(utt_query).split()))
+        query = "%s %s %s" % (utt_word, utt_verb, utt_query)
+        LOG.debug("Querying WolframAlpha: " + query)
 
-            # TODO: This should be its own intent or skill DM
-            if "convert" in query:
-                to_convert = utt_query[:utt_query.index(utt_query.split(" ")[-1])]
-                query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
-            LOG.info(f"query={query}")
+        preference_location = self.preference_location(message)
+        lat = str(preference_location['lat'])
+        lng = str(preference_location['lng'])
+        units = str(self.preference_unit(message)["measure"])
+        query_type = QueryApi.SHORT if self.server else QueryApi.SPOKEN
+        key = (utterance, lat, lng, units, repr(query_type))
 
-            if self.saved_answers.get(key):
-                LOG.info(f"Using W|A Cached response")
-                result = self.saved_answers.get(key)[0]
-            else:
-                kwargs = {"lat": lat, "lng": lng}
-                if self.appID:
-                    kwargs["app_id"] = self.appID
-                result = get_wolfram_alpha_response(query, query_type, units, **kwargs)
-                LOG.info(f"result={result}")
-            if result:
-                self.saved_answers[key] = [result, query]
-                self.update_cached_data("wolfram.txt", self.saved_answers)
+        # TODO: This should be its own intent or skill DM
+        if "convert" in query:
+            to_convert = utt_query[:utt_query.index(utt_query.split(" ")[-1])]
+            query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
+        LOG.info(f"query={query}")
+
+        if self.saved_answers.get(key):
+            result = self.saved_answers.get(key)[0]
+            LOG.info(f"Using W|A Cached response: {result}")
         else:
-            result = None
-            key = None
+            kwargs = {"lat": lat, "lng": lng}
+            if self.appID:
+                kwargs["app_id"] = self.appID
+            try:
+                result = get_wolfram_alpha_response(query, query_type,
+                                                    units, **kwargs)
+                LOG.info(f"result={result}")
+            except Exception as e:
+                LOG.exception(e)
+                return None
+        if result:
+            self.saved_answers[key] = [result, query]
+            self.update_cached_data("wolfram.txt", self.saved_answers)
+
         return result, key
 
 
