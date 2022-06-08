@@ -188,7 +188,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         if self.gui_enabled:
             self.gui.clear()
 
-    def _query_wolfram(self, utterance, message):
+    def _query_wolfram(self, utterance, message) -> tuple:
         utterance = normalize(utterance, remove_articles=False)
         parsed_question = self.question_parser.parse(utterance)
         LOG.debug(parsed_question)
@@ -226,15 +226,35 @@ class WolframAlphaSkill(CommonQuerySkill):
             try:
                 result = get_wolfram_alpha_response(query, query_type,
                                                     units, **kwargs)
-                LOG.info(f"result={result}")
             except Exception as e:
-                LOG.exception(e)
-                return None
+                LOG.error(e)
+                result = _patched_wolfram_call(query, query_type,
+                                               units, **kwargs)
+            LOG.info(f"result={result}")
         if result:
             self.saved_answers[key] = [result, query]
             self.update_cached_data("wolfram.txt", self.saved_answers)
 
         return result, key
+
+
+def _patched_wolfram_call(query: str, api: QueryApi, units: str, **kwargs):
+    # patched in neon_api_proxy 0.3.2a0
+    from neon_api_proxy.client import request_api
+    from neon_api_proxy.client import NeonAPI
+    from neon_api_proxy.client.wolfram_alpha import get_geolocation_params
+    query_params = get_geolocation_params(**kwargs)
+    query_params["units"] = units
+    query_params["query"] = query
+    query_params["api"] = repr(api)
+
+    resp = request_api(NeonAPI.WOLFRAM_ALPHA, query_params)
+    if isinstance(resp.get("content"), str):
+        return resp["content"]
+    elif resp.get("content") and resp.get("encoding"):
+        return resp["content"].decode(resp["encoding"])
+    else:
+        return None
 
 
 def check_wolfram_credentials(cred_str) -> bool:
