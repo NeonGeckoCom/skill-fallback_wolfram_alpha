@@ -43,7 +43,7 @@
 import re
 
 from adapt.intent import IntentBuilder
-from neon_utils import get_utterance_user
+from neon_utils.user_utils import get_message_user, get_user_prefs
 from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from neon_utils.logger import LOG
 from neon_utils.authentication_utils import find_neon_wolfram_key
@@ -115,8 +115,6 @@ class WolframAlphaSkill(CommonQuerySkill):
     def _get_app_id(self):
         if check_wolfram_credentials(self.settings.get("appId")):
             self.appID = self.settings.get("appId")
-        elif check_wolfram_credentials(self.local_config.get("authVars", {}).get("waID")):
-            self.appID = self.local_config.get("authVars", {}).get("waID")
         else:
             try:
                 self.appID = find_neon_wolfram_key()
@@ -131,25 +129,27 @@ class WolframAlphaSkill(CommonQuerySkill):
         self.register_intent(ask_wolfram_intent, self.handle_ask_wolfram)
 
     def handle_ask_wolfram(self, message):
-        utterance = message.data.get("utterance").replace(message.data.get("Request"), "")
-        user = get_utterance_user(message)
+        utterance = message.data.get("utterance")\
+            .replace(message.data.get("Request"), "")
+        user = get_message_user(message)
         result, _ = self._query_wolfram(utterance, message)
         if result:
             self.speak_dialog("response", {"response": result.rstrip('.')})
             self.queries[user] = utterance
             if self.gui_enabled:
-                url = 'https://www.wolframalpha.com/input?i=' + utterance.replace(' ', '+')
+                url = 'https://www.wolframalpha.com/input?i=' + \
+                      utterance.replace(' ', '+')
                 self.gui.show_url(url)
-                self.clear_gui_timeout(120)
 
     def CQS_match_query_phrase(self, utt, message):
         LOG.info(utt)
         result, key = self._query_wolfram(utt, message)
         if result:
-            to_speak = self.dialog_renderer.render("response", {"response": result.rstrip(".")})
-            user = self.get_utterance_user(message)
-            return utt, CQSMatchLevel.GENERAL, to_speak, {"query": utt, "answer": result,
-                                                          "user": user, "key": key}
+            to_speak = self.dialog_renderer.render(
+                "response", {"response": result.rstrip(".")})
+            user = get_message_user(message)
+            return utt, CQSMatchLevel.GENERAL, to_speak,\
+                   {"query": utt, "answer": result, "user": user, "key": key}
         else:
             return None
 
@@ -160,25 +160,28 @@ class WolframAlphaSkill(CommonQuerySkill):
             user = data['user']
             self.queries[user] = data["query"]
             if self.gui_enabled:
-                url = 'https://www.wolframalpha.com/input?i=' + data["query"].replace(' ', '+')
+                url = 'https://www.wolframalpha.com/input?i=' + \
+                      data["query"].replace(' ', '+')
                 self.gui.show_url(url)
-                self.clear_gui_timeout(120)
 
     def handle_get_sources(self, message):
-        user = self.get_utterance_user(message)
+        user = get_message_user(message)
         if user in self.queries.keys():
             last_query = self.queries[user]
-            preference_user = self.preference_user(message)
+            preference_user = get_user_prefs(message)["user"]
             email_addr = preference_user["email"]
 
             if email_addr:
                 title = "Wolfram|Alpha Source"
-                body = f"\nHere is the answer to your question: {last_query}\nView result on " \
-                       f"Wolfram|Alpha: https://www.wolframalpha.com/input/?i={last_query.replace(' ', '+')}\n\n" \
+                body = f"\nHere is the answer to your question: " \
+                       f"{last_query}\nView result on Wolfram|Alpha: " \
+                       f"https://www.wolframalpha.com/input/?i=" \
+                       f"{last_query.replace(' ', '+')}\n\n" \
                        f"-Neon"
                 # Send Email
                 self.send_email(title, body, message, email_addr)
-                self.speak_dialog("sent.email", {"email": email_addr}, private=True)
+                self.speak_dialog("sent.email", {"email": email_addr},
+                                  private=True)
             else:
                 self.speak_dialog("no.email", private=True)
         else:
@@ -203,11 +206,12 @@ class WolframAlphaSkill(CommonQuerySkill):
         query = "%s %s %s" % (utt_word, utt_verb, utt_query)
         LOG.debug("Querying WolframAlpha: " + query)
 
-        preference_location = self.preference_location(message)
+        preference_location = get_user_prefs(message)["location"]
         lat = str(preference_location['lat'])
         lng = str(preference_location['lng'])
-        units = str(self.preference_unit(message)["measure"])
-        query_type = QueryApi.SHORT if self.server else QueryApi.SPOKEN
+        units = str(get_user_prefs(message)["units"]["measure"])
+        query_type = QueryApi.SHORT if message.context.get("klat_data") \
+            else QueryApi.SPOKEN
         key = (utterance, lat, lng, units, repr(query_type))
 
         # TODO: This should be its own intent or skill DM

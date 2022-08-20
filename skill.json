@@ -15,9 +15,8 @@
     "systemDeps": false,
     "requirements": {
         "python": [
-            "mtranslate",
-            "neon-api-proxy~=0.3",
-            "neon-utils~=0.6",
+            "neon-api-proxy~=0.3,>=0.3.3",
+            "neon-utils~=1.0",
             "requests>=2.13.0"
         ],
         "system": {},
