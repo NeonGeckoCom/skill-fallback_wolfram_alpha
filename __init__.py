@@ -236,7 +236,8 @@ class WolframAlphaSkill(CommonQuerySkill):
                                                units, **kwargs)
             LOG.info(f"result={result}")
         if result in ("Wolfram Alpha did not understand your input",
-                      "Wolfram|Alpha did not understand your input"):
+                      "Wolfram|Alpha did not understand your input",
+                      "No spoken result available"):
             LOG.error("Got error result")
             return None, None
         if result:
