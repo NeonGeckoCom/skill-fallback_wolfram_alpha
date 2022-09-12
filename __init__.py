@@ -235,9 +235,12 @@ class WolframAlphaSkill(CommonQuerySkill):
                 result = _patched_wolfram_call(query, query_type,
                                                units, **kwargs)
             LOG.info(f"result={result}")
+        # TODO: get_wolfram_alpha_response should return status to check; these
+        #   are all 501 return cases
         if result in ("Wolfram Alpha did not understand your input",
                       "Wolfram|Alpha did not understand your input",
-                      "No spoken result available"):
+                      "No spoken result available",
+                      "No short answer available"):
             LOG.error("Got error result")
             return None, None
         if result:
