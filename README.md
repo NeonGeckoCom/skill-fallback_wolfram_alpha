@@ -16,37 +16,14 @@ Wolfram|Alpha API directly by providing a key in `~/wolfram.txt`. You can genera
 ## Examples
 
 Ask Neon any questions starting with `What`, `Why`, or `How`
-- What is 2 + 2
-- Who won best picture in 2006
-- How far away is the moon
+- What is 2 + 2?
+- Who won best picture in 2006?
+- How far away is the moon?
 
 To receive an email with related information:
-- Send me the source for that
+- Send me the source for that.
 
 > **Please note that Neon will ask for your email address and name if this information is not currently available in your user settings.**
-
-## Details
-
-### Text
-        
-        How far away is the moon?
-        >> The distance from Earth to the Moon at 9:21 P.M. CET, Thursday, February 21, 2019 is about 225332 miles. Provided by WolframAlpha.
-        
-        Send me the source.      
-        >> I've sent you an email with details from Wolfram Alpha.  
-        
-### Picture
-
-### Video
-
-  
-
-## Troubleshooting
-
-Make sure that your wolfram credentials are active and in the correct format before starting the work with this skill or
-if you are experiencing any problems with it.
-
-  
 
 ## Contact Support
 
