@@ -149,7 +149,7 @@ class WolframAlphaSkill(CommonQuerySkill):
                 "response", {"response": result.rstrip(".")})
             user = get_message_user(message)
             return utt, CQSMatchLevel.GENERAL, to_speak,\
-                   {"query": utt, "answer": result, "user": user, "key": key}
+                {"query": utt, "answer": result, "user": user, "key": key}
         else:
             return None
 
@@ -235,6 +235,14 @@ class WolframAlphaSkill(CommonQuerySkill):
                 result = _patched_wolfram_call(query, query_type,
                                                units, **kwargs)
             LOG.info(f"result={result}")
+        # TODO: get_wolfram_alpha_response should return status to check; these
+        #   are all 501 return cases
+        if result in ("Wolfram Alpha did not understand your input",
+                      "Wolfram|Alpha did not understand your input",
+                      "No spoken result available",
+                      "No short answer available"):
+            LOG.error("Got error result")
+            return None, None
         if result:
             self.saved_answers[key] = [result, query]
             self.update_cached_data("wolfram.txt", self.saved_answers)
