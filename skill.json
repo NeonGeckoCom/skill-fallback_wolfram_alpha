@@ -5,10 +5,10 @@
     "short_description": "General knowledge fallback handler based on [Wolfram Alpha](https://wolframalpha.com) services",
     "description": "Answers general knowledge, math, and definition questions by using Wolfram Alpha Api services. If the user is interested in knowing where the information for the spoken answer came from, Neon can send the most recent source of the spoken details to user\u2019s email. Responses are cached and saved for later use. Use of this skill requires use of third-party APIs. If you do not have access to Neon API servers, you may access the Wolfram|Alpha API directly by providing a key in `~/wolfram.txt`. You can generate a Wolfram|Alpha key [here](https://developer.wolframalpha.com/portal/myapps/).",
     "examples": [
-        "what is 2 + 2",
-        "who won best picture in 2006",
-        "how far away is the moon",
-        "send me the source for that"
+        "What is 2 + 2?",
+        "Who won best picture in 2006?",
+        "How far away is the moon?",
+        "Send me the source for that."
     ],
     "desktopFile": false,
     "warning": "",
@@ -43,6 +43,5 @@
     ],
     "skillname": "skill-fallback_wolfram_alpha",
     "authorname": "NeonGeckoCom",
-    "foldername": null,
-    "troubleshooting": "Make sure that your wolfram credentials are active and in the correct format before starting the work with this skill or if you are experiencing any problems with it."
+    "foldername": null
 }
