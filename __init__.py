@@ -109,17 +109,22 @@ class WolframAlphaSkill(CommonQuerySkill):
         self.question_parser = EnglishQuestionParser()
         self.queries = {}
         self.saved_answers = self.get_cached_data("wolfram.cache")
-        self.appID = None
-        self._get_app_id()
+        self._app_id = None
+
+    @property
+    def appID(self):
+        if not self._app_id:
+            self._get_app_id()
+        return self._app_id
 
     def _get_app_id(self):
         if check_wolfram_credentials(self.settings.get("appId")):
-            self.appID = self.settings.get("appId")
+            self._app_id = self.settings.get("appId")
         else:
             try:
-                self.appID = find_neon_wolfram_key()
+                self._app_id = find_neon_wolfram_key()
             except FileNotFoundError:
-                self.appID = None
+                pass
 
     def initialize(self):
         sources_intent = IntentBuilder("WolframSource").require("Give").require("Source").build()
