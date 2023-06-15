@@ -105,8 +105,8 @@ class WolframAlphaSkill(CommonQuerySkill):
         "DecimalApproximation",
     ]
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.question_parser = EnglishQuestionParser()
         self.queries = {}
         self.saved_answers = self.get_cached_data("wolfram.cache")
@@ -303,7 +303,3 @@ def check_wolfram_credentials(cred_str) -> bool:
     except Exception as e:
         LOG.error(e)
         return False
-
-
-def create_skill():
-    return WolframAlphaSkill()
