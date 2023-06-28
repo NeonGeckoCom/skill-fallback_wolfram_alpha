@@ -239,6 +239,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         LOG.info(f"query={query}")
 
         if self.saved_answers.get(key):
+            # TODO: Curate cache on some schedule
             result = self.saved_answers.get(key)[0]
             LOG.info(f"Using W|A Cached response: {result}")
         else:
