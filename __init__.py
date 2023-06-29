@@ -97,23 +97,15 @@ class EnglishQuestionParser(object):
 
 
 class WolframAlphaSkill(CommonQuerySkill):
-    PIDS = [
-        "Value",
-        "NotableFacts:PeopleData",
-        "BasicInformation:PeopleData",
-        "Definition",
-        "DecimalApproximation",
-    ]
-
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        CommonQuerySkill.__init__(self, **kwargs)
         self.question_parser = EnglishQuestionParser()
         self.queries = {}
         self.saved_answers = self.get_cached_data("wolfram.cache")
         self._app_id = None
 
     @property
-    def appID(self):
+    def app_id(self):
         if not self._app_id:
             self._get_app_id()
         return self._app_id
@@ -244,8 +236,8 @@ class WolframAlphaSkill(CommonQuerySkill):
             LOG.info(f"Using W|A Cached response: {result}")
         else:
             kwargs = {"lat": lat, "lng": lng}
-            if self.appID:
-                kwargs["app_id"] = self.appID
+            if self.app_id:
+                kwargs["app_id"] = self.app_id
             try:
                 result = get_wolfram_alpha_response(query, query_type,
                                                     units, **kwargs)
