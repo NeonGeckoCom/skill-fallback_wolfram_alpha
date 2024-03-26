@@ -46,12 +46,10 @@ from adapt.intent import IntentBuilder
 from ovos_utils import classproperty
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import RuntimeRequirements
-from neon_utils.user_utils import get_message_user, get_user_prefs
+from lingua_franca.parse import normalize
 from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
-from neon_utils.authentication_utils import find_neon_wolfram_key
-from neon_api_proxy.client.wolfram_alpha import get_wolfram_alpha_response, QueryApi
-
-from mycroft.util.parse import normalize
+from neon_utils.user_utils import get_message_user, get_user_prefs
+from neon_utils.hana_utils import request_backend
 
 
 class EnglishQuestionParser(object):
@@ -101,23 +99,6 @@ class WolframAlphaSkill(CommonQuerySkill):
         CommonQuerySkill.__init__(self, **kwargs)
         self.question_parser = EnglishQuestionParser()
         self.queries = {}
-        self.saved_answers = self.get_cached_data("wolfram.cache")
-        self._app_id = None
-
-    @property
-    def app_id(self):
-        if not self._app_id:
-            self._get_app_id()
-        return self._app_id
-
-    def _get_app_id(self):
-        if check_wolfram_credentials(self.settings.get("appId")):
-            self._app_id = self.settings.get("appId")
-        else:
-            try:
-                self._app_id = find_neon_wolfram_key()
-            except FileNotFoundError:
-                pass
 
     @classproperty
     def runtime_requirements(self):
@@ -146,10 +127,9 @@ class WolframAlphaSkill(CommonQuerySkill):
         if result:
             self.speak_dialog("response", {"response": result.rstrip('.')})
             self.queries[user] = utterance
-            if self.gui_enabled:
-                url = 'https://www.wolframalpha.com/input?i=' + \
-                      utterance.replace(' ', '+')
-                self.gui.show_url(url)
+            url = 'https://www.wolframalpha.com/input?i=' + \
+                  utterance.replace(' ', '+')
+            self.gui.show_url(url)
 
     def CQS_match_query_phrase(self, utt, message):
         LOG.info(utt)
@@ -220,8 +200,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         lat = str(preference_location['lat'])
         lng = str(preference_location['lng'])
         units = str(get_user_prefs(message)["units"]["measure"])
-        query_type = QueryApi.SHORT if message.context.get("klat_data") \
-            else QueryApi.SPOKEN
+        query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (utterance, lat, lng, units, repr(query_type))
 
         # TODO: This should be its own intent or skill DM
@@ -230,69 +209,21 @@ class WolframAlphaSkill(CommonQuerySkill):
             query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
         LOG.info(f"query={query}")
 
-        if self.saved_answers.get(key):
-            # TODO: Curate cache on some schedule
-            result = self.saved_answers.get(key)[0]
-            LOG.info(f"Using W|A Cached response: {result}")
-        else:
-            kwargs = {"lat": lat, "lng": lng}
-            if self.app_id:
-                kwargs["app_id"] = self.app_id
-            try:
-                result = get_wolfram_alpha_response(query, query_type,
-                                                    units, **kwargs)
-            except Exception as e:
-                LOG.error(e)
-                result = _patched_wolfram_call(query, query_type,
-                                               units, **kwargs)
-            LOG.info(f"result={result}")
-        # TODO: get_wolfram_alpha_response should return status to check; these
-        #   are all 501 return cases
+        kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units, "query": query}
+
+        try:
+            result = request_backend("proxy/wolframalpha", kwargs).get("answer")
+        except Exception as e:
+            LOG.error(e)
+            result = None
+        LOG.info(f"result={result}")
+        # TODO: are all 501 return cases from W|A that should be forwarded from Hana
         if result in ("Wolfram Alpha did not understand your input",
                       "Wolfram|Alpha did not understand your input",
                       "No spoken result available",
-                      "No short answer available"):
+                      "No short answer available",
+                      None):
             LOG.error("Got error result")
             return None, None
-        if result:
-            self.saved_answers[key] = [result, query]
-            self.update_cached_data("wolfram.txt", self.saved_answers)
 
         return result, key
-
-
-def _patched_wolfram_call(query: str, api: QueryApi, units: str, **kwargs):
-    # patched in neon_api_proxy 0.3.2a0
-    from neon_api_proxy.client import request_api
-    from neon_api_proxy.client import NeonAPI
-    from neon_api_proxy.client.wolfram_alpha import get_geolocation_params
-    query_params = get_geolocation_params(**kwargs)
-    query_params["units"] = units
-    query_params["query"] = query
-    query_params["api"] = repr(api)
-
-    resp = request_api(NeonAPI.WOLFRAM_ALPHA, query_params)
-    if isinstance(resp.get("content"), str):
-        return resp["content"]
-    elif resp.get("content") and resp.get("encoding"):
-        return resp["content"].decode(resp["encoding"])
-    else:
-        return None
-
-
-def check_wolfram_credentials(cred_str) -> bool:
-    """
-    Validate a WolframAlpha credential
-    :param cred_str: string appID to test
-    :return: True if credential is valid, else False
-    """
-    import requests
-    if not cred_str:
-        return False
-    try:
-        url = f'https://api.wolframalpha.com/v2/result?appid={cred_str}&i=who+are+you'
-        resp = requests.get(url)
-        return resp.ok
-    except Exception as e:
-        LOG.error(e)
-        return False
