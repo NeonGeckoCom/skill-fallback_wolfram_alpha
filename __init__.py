@@ -212,13 +212,12 @@ class WolframAlphaSkill(CommonQuerySkill):
         kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units, "query": query}
 
         try:
-            result = request_backend("proxy/wolframalpha", kwargs)
+            result = request_backend("proxy/wolframalpha", kwargs).get("answer")
         except Exception as e:
             LOG.error(e)
             result = None
         LOG.info(f"result={result}")
-        # TODO: get_wolfram_alpha_response should return status to check; these
-        #   are all 501 return cases
+        # TODO: are all 501 return cases from W|A that should be forwarded from Hana
         if result in ("Wolfram Alpha did not understand your input",
                       "Wolfram|Alpha did not understand your input",
                       "No spoken result available",
