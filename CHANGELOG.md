@@ -1,29 +1,40 @@
 # Changelog
 
-## [0.1.1a4](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/0.1.1a4) (2023-06-29)
+## [1.0.1a4](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a4) (2024-04-02)
 
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/0.1.1a3...0.1.1a4)
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.1a3...1.0.1a4)
 
-**Merged pull requests:**
+**Fixed bugs:**
 
-- Cleanup and refactor for best practices [\#37](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/37) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [0.1.1a3](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/0.1.1a3) (2023-06-28)
-
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/0.1.1a2...0.1.1a3)
+- \[BUG\] App ID generation link is dead [\#39](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/issues/39)
 
 **Merged pull requests:**
 
-- Stable dependencies [\#36](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/36) ([NeonDaniel](https://github.com/NeonDaniel))
+- Update documentation to reflect backend changes [\#44](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/44) ([NeonDaniel](https://github.com/NeonDaniel))
 
-## [0.1.1a2](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/0.1.1a2) (2023-06-15)
+## [1.0.1a3](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a3) (2024-03-26)
 
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/0.1.0...0.1.1a2)
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.1a2...1.0.1a3)
 
 **Merged pull requests:**
 
-- Update GH automation to best practices [\#35](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/35) ([NeonDaniel](https://github.com/NeonDaniel))
-- Update to resolve warnings [\#33](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/33) ([NeonDaniel](https://github.com/NeonDaniel))
+- Loosen adapt-parser dependency [\#42](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/42) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [1.0.1a2](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a2) (2024-03-26)
+
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.1a1...1.0.1a2)
+
+**Merged pull requests:**
+
+- Refactor to use HANA endpoint [\#41](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/41) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [1.0.1a1](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a1) (2024-02-05)
+
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.0...1.0.1a1)
+
+**Merged pull requests:**
+
+- Support ovos-utils 0.1 [\#40](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/40) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
