@@ -6,12 +6,14 @@ General knowledge fallback handler based on [Wolfram Alpha](https://wolframalpha
 
 ## Description
 
-Answers general knowledge, math, and definition questions by using Wolfram Alpha Api services. If the user is interested in knowing where the information for the spoken answer came from, Neon can send the most recent source of the spoken details to user’s email.
-Responses are cached and saved for later use.
+Answers general knowledge, math, and definition questions by using Wolfram Alpha
+API services. If the user is interested in knowing where the information for the
+spoken answer came from, Neon can send the most recent source of the spoken 
+details to user’s email.
 
-Use of this skill requires use of third-party APIs. If you do not have access to Neon API servers, you may access the
-Wolfram|Alpha API directly by providing a key in `~/wolfram.txt`. You can generate a Wolfram|Alpha key
-[here](https://developer.wolframalpha.com/portal/myapps/).
+Use of this skill requires use of third-party APIs. This skill will use Neon AI
+servers by default, but you can deploy your own instance of 
+[Diana](https://github.com/NeonGeckoCom/neon-diana-utils).
 
 ## Examples
 
