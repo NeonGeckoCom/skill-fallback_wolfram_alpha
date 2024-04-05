@@ -149,10 +149,9 @@ class WolframAlphaSkill(CommonQuerySkill):
             LOG.info('Setting information for source')
             user = data['user']
             self.queries[user] = data["query"]
-            if self.gui_enabled:
-                url = 'https://www.wolframalpha.com/input?i=' + \
-                      data["query"].replace(' ', '+')
-                self.gui.show_url(url)
+            url = 'https://www.wolframalpha.com/input?i=' + \
+                  data["query"].replace(' ', '+')
+            self.gui.show_url(url)
 
     def handle_get_sources(self, message):
         user = get_message_user(message)
@@ -176,10 +175,6 @@ class WolframAlphaSkill(CommonQuerySkill):
                 self.speak_dialog("no.email", private=True)
         else:
             self.speak_dialog("no.info.to.send", private=True)
-
-    def stop(self):
-        if self.gui_enabled:
-            self.gui.clear()
 
     def _query_wolfram(self, utterance, message) -> tuple:
         utterance = normalize(utterance, remove_articles=False)
