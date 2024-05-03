@@ -49,7 +49,7 @@ from ovos_utils.process_utils import RuntimeRequirements
 from lingua_franca.parse import normalize
 from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from neon_utils.user_utils import get_message_user, get_user_prefs
-from neon_utils.hana_utils import request_backend
+from neon_utils.hana_utils import request_backend, ServerException
 
 
 class EnglishQuestionParser(object):
@@ -204,21 +204,16 @@ class WolframAlphaSkill(CommonQuerySkill):
             query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
         LOG.info(f"query={query}")
 
-        kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units, "query": query}
-
+        kwargs = {"lat": lat, "lon": lng, "api": query_type,
+                  "units": units, "query": query}
+        LOG.debug(f"request_data={kwargs}")
         try:
-            result = request_backend("proxy/wolframalpha", kwargs).get("answer")
-        except Exception as e:
+            result = request_backend("proxy/wolframalpha",
+                                     kwargs).get("answer")
+        except ServerException as e:
             LOG.error(e)
-            result = None
-        LOG.info(f"result={result}")
-        # TODO: are all 501 return cases from W|A that should be forwarded from Hana
-        if result in ("Wolfram Alpha did not understand your input",
-                      "Wolfram|Alpha did not understand your input",
-                      "No spoken result available",
-                      "No short answer available",
-                      None):
-            LOG.error("Got error result")
             return None, None
-
+        except Exception as e:
+            LOG.exception(e)
+            return None, None
         return result, key
