@@ -1,40 +1,20 @@
 # Changelog
 
-## [1.0.1a4](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a4) (2024-04-02)
+## [2.0.1a2](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.0.1a2) (2024-06-18)
 
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.1a3...1.0.1a4)
-
-**Fixed bugs:**
-
-- \[BUG\] App ID generation link is dead [\#39](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/issues/39)
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.0.1a1...2.0.1a2)
 
 **Merged pull requests:**
 
-- Update documentation to reflect backend changes [\#44](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/44) ([NeonDaniel](https://github.com/NeonDaniel))
+- Refactor parsing and error handling for better responses [\#47](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/47) ([NeonDaniel](https://github.com/NeonDaniel))
 
-## [1.0.1a3](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a3) (2024-03-26)
+## [2.0.1a1](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.0.1a1) (2024-04-05)
 
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.1a2...1.0.1a3)
-
-**Merged pull requests:**
-
-- Loosen adapt-parser dependency [\#42](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/42) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [1.0.1a2](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a2) (2024-03-26)
-
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.1a1...1.0.1a2)
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.0.0...2.0.1a1)
 
 **Merged pull requests:**
 
-- Refactor to use HANA endpoint [\#41](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/41) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [1.0.1a1](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/1.0.1a1) (2024-02-05)
-
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/1.0.0...1.0.1a1)
-
-**Merged pull requests:**
-
-- Support ovos-utils 0.1 [\#40](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/40) ([NeonDaniel](https://github.com/NeonDaniel))
+- Remove deprecated GUI checks [\#46](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/46) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
