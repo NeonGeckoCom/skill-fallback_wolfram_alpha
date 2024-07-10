@@ -40,8 +40,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import re
-
 from adapt.intent import IntentBuilder
 from ovos_utils import classproperty
 from ovos_utils.log import LOG
@@ -52,52 +50,9 @@ from neon_utils.user_utils import get_message_user, get_user_prefs
 from neon_utils.hana_utils import request_backend
 
 
-class EnglishQuestionParser(object):
-    """
-    Poor-man's english question parser. Not even close to conclusive, but
-    appears to construct some decent w|a queries and responses.
-    """
-
-    def __init__(self):
-        self.regexes = [
-            # Match things like:
-            #    * when X was Y, e.g. "tell me when america was founded"
-            #    how X is Y, e.g. "how tall is mount everest"
-            re.compile(
-                ".*(?P<QuestionWord>who|what|when|where|why|which|whose|convert|how old) "
-                "(?P<Query1>.*) (?P<QuestionVerb>is|are|was|were|to) "
-                "(?P<Query2>.*)"),
-            # Match:
-            #    how X Y, e.g. "how do crickets chirp"
-            re.compile(
-                ".*(?P<QuestionWord>who|what|when|where|why|which|how) "
-                "(?P<QuestionVerb>\w+) (?P<Query>.*)")
-        ]
-
-    @staticmethod
-    def _normalize(groupdict):
-        if "Query" in groupdict:
-            return groupdict
-        elif "Query1" and "Query2" in groupdict:
-            # Join the two parts into a single 'Query'
-            return {
-                "QuestionWord": groupdict.get("QuestionWord"),
-                "QuestionVerb": groupdict.get("QuestionVerb"),
-                "Query": " ".join([groupdict.get("Query1"), groupdict.get("Query2")]),
-            }
-
-    def parse(self, utterance):
-        for regex in self.regexes:
-            match = regex.match(utterance)
-            if match:
-                return self._normalize(match.groupdict())
-        return None
-
-
 class WolframAlphaSkill(CommonQuerySkill):
     def __init__(self, **kwargs):
         CommonQuerySkill.__init__(self, **kwargs)
-        self.question_parser = EnglishQuestionParser()
         self.queries = {}
 
     @classproperty
@@ -149,10 +104,9 @@ class WolframAlphaSkill(CommonQuerySkill):
             LOG.info('Setting information for source')
             user = data['user']
             self.queries[user] = data["query"]
-            if self.gui_enabled:
-                url = 'https://www.wolframalpha.com/input?i=' + \
-                      data["query"].replace(' ', '+')
-                self.gui.show_url(url)
+            url = 'https://www.wolframalpha.com/input?i=' + \
+                  data["query"].replace(' ', '+')
+            self.gui.show_url(url)
 
     def handle_get_sources(self, message):
         user = get_message_user(message)
@@ -177,24 +131,21 @@ class WolframAlphaSkill(CommonQuerySkill):
         else:
             self.speak_dialog("no.info.to.send", private=True)
 
-    def stop(self):
-        if self.gui_enabled:
-            self.gui.clear()
-
-    def _query_wolfram(self, utterance, message) -> tuple:
-        utterance = normalize(utterance, remove_articles=False)
-        parsed_question = self.question_parser.parse(utterance)
-        LOG.debug(parsed_question)
-        if not parsed_question:
-            return None, None
+    def _query_wolfram(self, utterance, message) -> (str, str):
+        query = normalize(utterance, remove_articles=False)
+        # parsed_question = self.question_parser.parse(utterance)
+        # LOG.debug(parsed_question)
+        # if not parsed_question:
+        #     LOG.warning(f"No question pared from '{utterance}'")
+        #     return None, None
 
         # Try to store pieces of utterance (None if not parsed_question)
-        utt_word = parsed_question.get('QuestionWord')
-        utt_verb = parsed_question.get('QuestionVerb')
-        utt_query = parsed_question.get('Query')
-        LOG.debug(len(str(utt_query).split()))
-        query = "%s %s %s" % (utt_word, utt_verb, utt_query)
-        LOG.debug("Querying WolframAlpha: " + query)
+        # utt_word = parsed_question.get('QuestionWord')
+        # utt_verb = parsed_question.get('QuestionVerb')
+        # utt_query = parsed_question.get('Query')
+        # LOG.debug(len(str(utt_query).split()))
+        # query = "%s %s %s" % (utt_word, utt_verb, utt_query)
+        LOG.info(f"Querying WolframAlpha: {query}")
 
         preference_location = get_user_prefs(message)["location"]
         lat = str(preference_location['lat'])
@@ -203,27 +154,19 @@ class WolframAlphaSkill(CommonQuerySkill):
         query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (utterance, lat, lng, units, repr(query_type))
 
-        # TODO: This should be its own intent or skill DM
-        if "convert" in query:
-            to_convert = utt_query[:utt_query.index(utt_query.split(" ")[-1])]
-            query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
-        LOG.info(f"query={query}")
+        # if "convert" in query:
+        #     to_convert = utt_query[:utt_query.index(utt_query.split(" ")[-1])]
+        #     query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
+        # LOG.info(f"query={query}")
 
-        kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units, "query": query}
+        kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units,
+                  "query": query}
 
         try:
-            result = request_backend("proxy/wolframalpha", kwargs).get("answer")
+            result = request_backend("proxy/wolframalpha",
+                                     kwargs).get("answer")
         except Exception as e:
             LOG.error(e)
             result = None
         LOG.info(f"result={result}")
-        # TODO: are all 501 return cases from W|A that should be forwarded from Hana
-        if result in ("Wolfram Alpha did not understand your input",
-                      "Wolfram|Alpha did not understand your input",
-                      "No spoken result available",
-                      "No short answer available",
-                      None):
-            LOG.error("Got error result")
-            return None, None
-
         return result, key
