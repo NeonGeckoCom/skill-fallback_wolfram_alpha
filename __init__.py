@@ -40,10 +40,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from adapt.intent import IntentBuilder
+
 from ovos_utils import classproperty
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import RuntimeRequirements
+from ovos_workshop.intents import IntentBuilder
 from lingua_franca.parse import normalize
 from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from neon_utils.user_utils import get_message_user, get_user_prefs
