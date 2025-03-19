@@ -41,12 +41,14 @@
 # limitations under the License.
 
 
+from typing import Tuple
 from ovos_utils import classproperty
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import RuntimeRequirements
+from ovos_bus_client.message import dig_for_message
 from ovos_workshop.intents import IntentBuilder
+from ovos_workshop.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from lingua_franca.parse import normalize
-from neon_utils.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
 from neon_utils.user_utils import get_message_user, get_user_prefs
 from neon_utils.hana_utils import request_backend
 
@@ -87,15 +89,16 @@ class WolframAlphaSkill(CommonQuerySkill):
                   utterance.replace(' ', '+')
             self.gui.show_url(url)
 
-    def CQS_match_query_phrase(self, utt, message):
-        LOG.info(utt)
-        result, key = self._query_wolfram(utt, message)
+    def CQS_match_query_phrase(self, phrase: str):
+        message = dig_for_message()
+        LOG.info(phrase)
+        result, key = self._query_wolfram(phrase, message)
         if result:
             to_speak = self.dialog_renderer.render(
                 "response", {"response": result.rstrip(".")})
             user = get_message_user(message)
-            return utt, CQSMatchLevel.GENERAL, to_speak,\
-                {"query": utt, "answer": result, "user": user, "key": key}
+            return phrase, CQSMatchLevel.GENERAL, to_speak,\
+                {"query": phrase, "answer": result, "user": user, "key": key}
         else:
             return None
 
@@ -132,7 +135,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         else:
             self.speak_dialog("no.info.to.send", private=True)
 
-    def _query_wolfram(self, utterance, message) -> (str, str):
+    def _query_wolfram(self, utterance, message) -> Tuple[str, str]:
         query = normalize(utterance, remove_articles=False)
         # parsed_question = self.question_parser.parse(utterance)
         # LOG.debug(parsed_question)
