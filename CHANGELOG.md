@@ -1,20 +1,28 @@
 # Changelog
 
-## [2.0.1a2](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.0.1a2) (2024-06-18)
+## [2.1.1a3](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.1.1a3) (2025-03-19)
 
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.0.1a1...2.0.1a2)
-
-**Merged pull requests:**
-
-- Refactor parsing and error handling for better responses [\#47](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/47) ([NeonDaniel](https://github.com/NeonDaniel))
-
-## [2.0.1a1](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.0.1a1) (2024-04-05)
-
-[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.0.0...2.0.1a1)
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.1.1a2...2.1.1a3)
 
 **Merged pull requests:**
 
-- Remove deprecated GUI checks [\#46](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/46) ([NeonDaniel](https://github.com/NeonDaniel))
+- Refactor to resolve deprecated CommonQuerySkill reference [\#51](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/51) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [2.1.1a2](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.1.1a2) (2025-03-11)
+
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.1.1a1...2.1.1a2)
+
+**Merged pull requests:**
+
+- Update automation, gitignore, and license notices [\#50](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/50) ([NeonDaniel](https://github.com/NeonDaniel))
+
+## [2.1.1a1](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/tree/2.1.1a1) (2024-09-17)
+
+[Full Changelog](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/compare/2.1.0...2.1.1a1)
+
+**Merged pull requests:**
+
+- Update OVOS depdendencies for 0.x compat [\#49](https://github.com/NeonGeckoCom/skill-fallback_wolfram_alpha/pull/49) ([NeonDaniel](https://github.com/NeonDaniel))
 
 
 
