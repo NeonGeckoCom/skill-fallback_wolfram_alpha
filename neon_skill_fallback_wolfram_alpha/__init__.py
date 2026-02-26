@@ -142,13 +142,11 @@ class WolframAlphaSkill(CommonQuerySkill):
     def get_wolfram_response(self, request: WolframAlphaQuery) -> dict:
         """
         Get a response from WolframAlpha for a given query and location.
-        @param query: The query to send to WolframAlpha.
-        @param lat: The latitude of the location to use for the query.
-        @param lon: The longitude of the location to use for the query.
-        @param units: The units to use for the query (optional, default is "metric").
-        @param api: The WolframAlpha API to use for the query (optional, default is "short").
+        @param request: The request object to send to WolframAlpha.
         @return: The response from WolframAlpha 
         """
+        if not isinstance(request, WolframAlphaQuery):
+            request = WolframAlphaQuery(**request)
         try:
             result = request_backend("proxy/wolframalpha",
                                      request.model_dump())
