@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2025 Neongecko.com Inc.
+# Copyright 2008-2026 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -30,7 +30,7 @@ from setuptools import setup
 from os import getenv, path, walk
 
 SKILL_NAME = "skill-fallback_wolfram_alpha"
-SKILL_PKG = SKILL_NAME.replace('-', '_')
+SKILL_PKG = "neon_" + SKILL_NAME.replace('-', '_')
 # skill_id=package_name:SkillClass
 PLUGIN_ENTRY_POINT = f'{SKILL_NAME}.neongeckocom={SKILL_PKG}:WolframAlphaSkill'
 BASE_PATH = path.abspath(path.dirname(__file__))
@@ -59,7 +59,7 @@ def get_requirements(requirements_filename: str):
 
 def find_resource_files():
     resource_base_dirs = ("locale", "ui", "vocab", "dialog", "regex")
-    base_dir = BASE_PATH
+    base_dir = path.join(BASE_PATH, SKILL_PKG)
     package_data = ["skill.json"]
     for res in resource_base_dirs:
         if path.isdir(path.join(base_dir, res)):
@@ -93,7 +93,6 @@ setup(
     author_email='developers@neon.ai',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    package_dir={SKILL_PKG: ""},
     packages=[SKILL_PKG],
     package_data={SKILL_PKG: find_resource_files()},
     include_package_data=True,

@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2025 Neongecko.com Inc.
+# Copyright 2008-2026 Neongecko.com Inc.
 # Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
 # Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
 # BSD-3 License
@@ -137,18 +137,7 @@ class WolframAlphaSkill(CommonQuerySkill):
 
     def _query_wolfram(self, utterance, message) -> Tuple[str, str]:
         query = normalize(utterance, remove_articles=False)
-        # parsed_question = self.question_parser.parse(utterance)
-        # LOG.debug(parsed_question)
-        # if not parsed_question:
-        #     LOG.warning(f"No question pared from '{utterance}'")
-        #     return None, None
-
-        # Try to store pieces of utterance (None if not parsed_question)
-        # utt_word = parsed_question.get('QuestionWord')
-        # utt_verb = parsed_question.get('QuestionVerb')
-        # utt_query = parsed_question.get('Query')
-        # LOG.debug(len(str(utt_query).split()))
-        # query = "%s %s %s" % (utt_word, utt_verb, utt_query)
+        # TODO: Better parsing of utterance into a question
         LOG.info(f"Querying WolframAlpha: {query}")
 
         preference_location = get_user_prefs(message)["location"]
@@ -156,16 +145,9 @@ class WolframAlphaSkill(CommonQuerySkill):
         lng = str(preference_location['lng'])
         units = str(get_user_prefs(message)["units"]["measure"])
         query_type = "short" if message.context.get("klat_data") else "spoken"
-        key = (utterance, lat, lng, units, repr(query_type))
-
-        # if "convert" in query:
-        #     to_convert = utt_query[:utt_query.index(utt_query.split(" ")[-1])]
-        #     query = f'convert {to_convert} to {query.split("to")[1].split(" ")[-1]}'
-        # LOG.info(f"query={query}")
-
+        key = (query, lat, lng, units, query_type)
         kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units,
                   "query": query}
-
         try:
             result = request_backend("proxy/wolframalpha",
                                      kwargs).get("answer")
