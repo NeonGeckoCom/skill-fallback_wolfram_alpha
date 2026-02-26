@@ -41,16 +41,19 @@
 # limitations under the License.
 
 
-from typing import Tuple
+from typing import Tuple, Literal
 from ovos_utils import classproperty
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import RuntimeRequirements
 from ovos_bus_client.message import dig_for_message
 from ovos_workshop.intents import IntentBuilder
 from ovos_workshop.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
+from ovos_workshop.decorators import skill_api_method
 from lingua_franca.parse import normalize
 from neon_utils.user_utils import get_message_user, get_user_prefs
 from neon_utils.hana_utils import request_backend
+
+from neon_skill_fallback_wolfram_alpha.data_models import WolframAlphaQuery
 
 
 class WolframAlphaSkill(CommonQuerySkill):
@@ -135,6 +138,26 @@ class WolframAlphaSkill(CommonQuerySkill):
         else:
             self.speak_dialog("no.info.to.send", private=True)
 
+    @skill_api_method
+    def get_wolfram_response(self, request: WolframAlphaQuery) -> dict:
+        """
+        Get a response from WolframAlpha for a given query and location.
+        @param query: The query to send to WolframAlpha.
+        @param lat: The latitude of the location to use for the query.
+        @param lon: The longitude of the location to use for the query.
+        @param units: The units to use for the query (optional, default is "metric").
+        @param api: The WolframAlpha API to use for the query (optional, default is "short").
+        @return: The response from WolframAlpha 
+        """
+        try:
+            result = request_backend("proxy/wolframalpha",
+                                     request.model_dump())
+        except Exception as e:
+            LOG.error(e)
+            result = {} 
+        LOG.info(f"result={result}")
+        return result
+
     def _query_wolfram(self, utterance, message) -> Tuple[str, str]:
         query = normalize(utterance, remove_articles=False)
         # TODO: Better parsing of utterance into a question
@@ -146,13 +169,5 @@ class WolframAlphaSkill(CommonQuerySkill):
         units = str(get_user_prefs(message)["units"]["measure"])
         query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (query, lat, lng, units, query_type)
-        kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units,
-                  "query": query}
-        try:
-            result = request_backend("proxy/wolframalpha",
-                                     kwargs).get("answer")
-        except Exception as e:
-            LOG.error(e)
-            result = None
-        LOG.info(f"result={result}")
-        return result, key
+        resp = self.get_wolfram_response(query, lat, lng, units, query_type).get('answer')
+        return resp, key
