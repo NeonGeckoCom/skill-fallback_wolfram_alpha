@@ -165,6 +165,7 @@ class WolframAlphaSkill(CommonQuerySkill):
         lat = str(preference_location['lat'])
         lng = str(preference_location['lng'])
         units = str(get_user_prefs(message)["units"]["measure"])
+        units = "metric" if units == "metric" else "nonmetric"
         query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (query, lat, lng, units, query_type)
         resp = self.get_wolfram_response(WolframAlphaQuery(query=query, 
