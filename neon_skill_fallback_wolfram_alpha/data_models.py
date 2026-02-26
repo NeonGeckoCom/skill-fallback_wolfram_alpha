@@ -38,3 +38,6 @@ class WolframAlphaQuery(BaseModel):
     units: Literal["metric", "nonmetric"] = Field(description="Units to use for the query", default="metric")
     api: WA_API = Field(description="Wolfram Alpha API to use for the query", default="short")
 
+
+class WolframAlphaResponse(BaseModel):
+    answer: str = Field(description="The answer to the query")
