@@ -167,7 +167,11 @@ class WolframAlphaSkill(CommonQuerySkill):
         units = str(get_user_prefs(message)["units"]["measure"])
         query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (query, lat, lng, units, query_type)
-        resp = self.get_wolfram_response(query, lat, lng, units, query_type).answer
+        resp = self.get_wolfram_response(WolframAlphaQuery(query=query, 
+                                                           lat=lat,
+                                                           lon=lng,
+                                                           units=units,
+                                                           api=query_type)).answer
         return resp, key
 
     # Duplicated from OVOSSkill for backwards-compat with skills using ovos-workshop 0.X
