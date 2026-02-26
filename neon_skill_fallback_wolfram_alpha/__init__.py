@@ -41,16 +41,19 @@
 # limitations under the License.
 
 
-from typing import Tuple
+from typing import Tuple, Literal
 from ovos_utils import classproperty
 from ovos_utils.log import LOG
 from ovos_utils.process_utils import RuntimeRequirements
 from ovos_bus_client.message import dig_for_message
 from ovos_workshop.intents import IntentBuilder
 from ovos_workshop.skills.common_query_skill import CommonQuerySkill, CQSMatchLevel
+from ovos_workshop.decorators import skill_api_method
 from lingua_franca.parse import normalize
 from neon_utils.user_utils import get_message_user, get_user_prefs
 from neon_utils.hana_utils import request_backend
+
+from neon_skill_fallback_wolfram_alpha.data_models import WolframAlphaQuery, WolframAlphaResponse
 
 
 class WolframAlphaSkill(CommonQuerySkill):
@@ -135,6 +138,24 @@ class WolframAlphaSkill(CommonQuerySkill):
         else:
             self.speak_dialog("no.info.to.send", private=True)
 
+    @skill_api_method
+    def get_wolfram_response(self, request: WolframAlphaQuery) -> WolframAlphaResponse:
+        """
+        Get a response from WolframAlpha for a given query and location. Any
+        application must include "Powered by Wolfram|Alpha" in the response to
+        comply with WolframAlpha's attribution requirements.
+        @param request: The request object to send to WolframAlpha.
+        @return: The response from WolframAlpha 
+        """
+        try:
+            result = request_backend("proxy/wolframalpha",
+                                     request.model_dump())
+        except Exception as e:
+            LOG.error(e)
+            result = {} 
+        LOG.info(f"result={result}")
+        return WolframAlphaResponse(**result)
+
     def _query_wolfram(self, utterance, message) -> Tuple[str, str]:
         query = normalize(utterance, remove_articles=False)
         # TODO: Better parsing of utterance into a question
@@ -144,15 +165,108 @@ class WolframAlphaSkill(CommonQuerySkill):
         lat = str(preference_location['lat'])
         lng = str(preference_location['lng'])
         units = str(get_user_prefs(message)["units"]["measure"])
+        units = "metric" if units == "metric" else "nonmetric"
         query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (query, lat, lng, units, query_type)
-        kwargs = {"lat": lat, "lon": lng, "api": query_type, "units": units,
-                  "query": query}
-        try:
-            result = request_backend("proxy/wolframalpha",
-                                     kwargs).get("answer")
-        except Exception as e:
-            LOG.error(e)
-            result = None
-        LOG.info(f"result={result}")
-        return result, key
+        resp = self.get_wolfram_response(WolframAlphaQuery(query=query, 
+                                                           lat=lat,
+                                                           lon=lng,
+                                                           units=units,
+                                                           api=query_type)).answer
+        return resp, key
+
+    # Duplicated from OVOSSkill for backwards-compat with skills using ovos-workshop 0.X
+    def _register_public_api(self):
+        """
+        Find and register API methods decorated with `@api_method` and create a
+        messagebus handler for fetching the api info if any handlers exist.
+        """
+
+        def wrap_method(fn, arg_model=None):
+            """Boilerplate for returning the response to the sender."""
+
+            def wrapper(message):
+                result = None
+                error = None
+                try:
+                    if arg_model:
+                        result = fn(arg_model(*message.data['args'], 
+                                              **message.data['kwargs']))
+                    else:
+                        result = fn(*message.data.get('args', []), 
+                                    **message.data.get('kwargs', {}))
+                    try:
+                        result = result.model_dump()
+                    except AttributeError:
+                        # Response is not a Pydantic model
+                        pass
+                except Exception as e:
+                    error = str(e)
+                message.context["skill_id"] = self.skill_id
+                self.bus.emit(message.response(data={'result': result,
+                                                     'error': error}))
+            return wrapper
+
+        from ovos_utils.skills import get_non_properties
+        methods = [attr_name for attr_name in get_non_properties(self)
+                   if hasattr(getattr(self, attr_name), '__name__')]
+
+        for attr_name in methods:
+            method = getattr(self, attr_name)
+
+            if hasattr(method, 'api_method'):
+                doc = method.__doc__ or ''
+                name = method.__name__
+
+                # Extract method signature and return type
+                import inspect
+                signature = inspect.signature(method)
+                schema = None
+                return_schema = None
+                request_class = None
+                try:
+                    from pydantic import BaseModel
+                    parameters = signature.parameters
+
+                    for arg_name, param in parameters.items():
+                        if arg_name == 'self':
+                            continue
+                        if issubclass(param.annotation, BaseModel):
+                            # Get the JSON schema for the BaseModel
+                            schema = param.annotation.model_json_schema()
+                            request_class = param.annotation
+                            break
+                    if signature.return_annotation and issubclass(signature.return_annotation, BaseModel):
+                        # Get the JSON schema for the return type
+                        return_schema = signature.return_annotation.model_json_schema()
+                except ImportError:
+                    # If pydantic is not installed, there is no schema to extract
+                    pass
+
+                self.public_api[name] = {
+                    'help': doc,
+                    'type': f'{self.skill_id}.{name}',
+                    'func': method,
+                    'signature': str(signature),
+                    'request_schema': schema,
+                    'response_schema': return_schema,
+                    'request_class': request_class
+                }
+        for key in self.public_api:
+            if ('type' in self.public_api[key] and
+                    'func' in self.public_api[key]):
+                self.log.debug(f"Adding api method: "
+                               f"{self.public_api[key]['type']}")
+
+                # remove the function member since it shouldn't be
+                # reused and can't be sent over the messagebus
+                func = self.public_api[key].pop('func')
+                req_class = self.public_api[key].pop('request_class', None)
+                self.add_event(self.public_api[key]['type'],
+                               wrap_method(func, req_class), speak_errors=False)
+
+        if self.public_api:
+            # TODO: Think about always registering this, so queries get an 
+            #  empty response, rather than waiting for a timeout
+            self.add_event(f'{self.skill_id}.public_api',
+                           self._send_public_api, speak_errors=False)
