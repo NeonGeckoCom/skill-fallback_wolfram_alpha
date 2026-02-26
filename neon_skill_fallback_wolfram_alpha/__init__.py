@@ -141,7 +141,9 @@ class WolframAlphaSkill(CommonQuerySkill):
     @skill_api_method
     def get_wolfram_response(self, request: WolframAlphaQuery) -> dict:
         """
-        Get a response from WolframAlpha for a given query and location.
+        Get a response from WolframAlpha for a given query and location. Any
+        application must include "Powered by Wolfram|Alpha" in the response to
+        comply with WolframAlpha's attribution requirements.
         @param request: The request object to send to WolframAlpha.
         @return: The response from WolframAlpha 
         """
