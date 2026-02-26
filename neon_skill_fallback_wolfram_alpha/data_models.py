@@ -29,7 +29,7 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
-WA_API = Literal["simple", "short", "spoken", "full", "recognize", "conversation"]
+WA_API = Literal["short", "spoken"]
 
 class WolframAlphaQuery(BaseModel):
     query: str = Field(description="The query to send to Wolfram Alpha")
