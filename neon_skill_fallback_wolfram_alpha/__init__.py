@@ -53,7 +53,7 @@ from lingua_franca.parse import normalize
 from neon_utils.user_utils import get_message_user, get_user_prefs
 from neon_utils.hana_utils import request_backend
 
-from neon_skill_fallback_wolfram_alpha.data_models import WolframAlphaQuery
+from neon_skill_fallback_wolfram_alpha.data_models import WolframAlphaQuery, WolframAlphaResponse
 
 
 class WolframAlphaSkill(CommonQuerySkill):
@@ -139,7 +139,7 @@ class WolframAlphaSkill(CommonQuerySkill):
             self.speak_dialog("no.info.to.send", private=True)
 
     @skill_api_method
-    def get_wolfram_response(self, request: WolframAlphaQuery) -> dict:
+    def get_wolfram_response(self, request: WolframAlphaQuery) -> WolframAlphaResponse:
         """
         Get a response from WolframAlpha for a given query and location. Any
         application must include "Powered by Wolfram|Alpha" in the response to
@@ -147,8 +147,6 @@ class WolframAlphaSkill(CommonQuerySkill):
         @param request: The request object to send to WolframAlpha.
         @return: The response from WolframAlpha 
         """
-        if not isinstance(request, WolframAlphaQuery):
-            request = WolframAlphaQuery(**request)
         try:
             result = request_backend("proxy/wolframalpha",
                                      request.model_dump())
@@ -156,7 +154,7 @@ class WolframAlphaSkill(CommonQuerySkill):
             LOG.error(e)
             result = {} 
         LOG.info(f"result={result}")
-        return result
+        return WolframAlphaResponse(**result)
 
     def _query_wolfram(self, utterance, message) -> Tuple[str, str]:
         query = normalize(utterance, remove_articles=False)
@@ -169,5 +167,5 @@ class WolframAlphaSkill(CommonQuerySkill):
         units = str(get_user_prefs(message)["units"]["measure"])
         query_type = "short" if message.context.get("klat_data") else "spoken"
         key = (query, lat, lng, units, query_type)
-        resp = self.get_wolfram_response(query, lat, lng, units, query_type).get('answer')
+        resp = self.get_wolfram_response(query, lat, lng, units, query_type).answer
         return resp, key
